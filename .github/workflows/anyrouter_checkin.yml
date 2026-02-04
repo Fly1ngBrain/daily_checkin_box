@@ -1,4 +1,4 @@
-name: AnyRouter Daily Checkin
+name: AnyRouter 每日签到
 
 on:
   schedule:
@@ -31,4 +31,4 @@ jobs:
           ANYROUTER_COOKIE: ${{ secrets.ANYROUTER_COOKIE }}
         run: |
           # 确保你的 Python 脚本文件名正确，如果是 anyrouter_checkin_env.py 就用下面这个：
-          python anyrouter_checkin_env.py
+          python anyrouter_checkin.py
