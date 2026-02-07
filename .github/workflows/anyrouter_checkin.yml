@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          playwright install chrome
+          playwright install chromium --with-deps
 
       # 4. 运行脚本
       - name: Run Checkin Script
