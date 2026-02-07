@@ -1,10 +1,9 @@
 import os
-import dotenv
 import asyncio
 from playwright.async_api import async_playwright
 
-
-dotenv.load_dotenv()  # 加载 .env 文件中的环境变量
+# import dotenv
+# dotenv.load_dotenv()  # 加载 .env 文件中的环境变量
 
 async def auto_sign_in():
     # 1. 从环境变量获取 Cookie
