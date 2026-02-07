@@ -14,7 +14,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. 设置 Python 环境 (注意：这里去掉了 cache: 'pip'，解决了你的报错)
+      # 2. 设置 Python 环境
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -23,7 +23,7 @@ jobs:
       # 3. 安装依赖
       - name: Install dependencies
         run: |
-          pip install curl_cffi
+          pip install -r requirements.txt
 
       # 4. 运行脚本
       - name: Run Checkin Script
