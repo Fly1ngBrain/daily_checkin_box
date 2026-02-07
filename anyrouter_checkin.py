@@ -1,42 +1,75 @@
 import os
-import requests
+import dotenv
+import asyncio
+from playwright.async_api import async_playwright
 
-def auto_sign_in():
+
+dotenv.load_dotenv()  # 加载 .env 文件中的环境变量
+
+async def auto_sign_in():
     # 1. 从环境变量获取 Cookie
-    cookie_str = os.getenv('ANYROUTER_COOKIE')
-    
-    if not cookie_str:
-        print("❌ 错误：未找到环境变量 ANYROUTER_COOKIE，请先设置后再运行。")
+    raw_cookie = os.getenv('ANYROUTER_COOKIE')
+    if not raw_cookie:
+        print("❌ 错误：未找到环境变量 ANYROUTER_COOKIE")
         return
 
-    # 2. 目标 URL
-    url = "https://anyrouter.top/api/user/sign_in"
+    # 提取 session 值（因为 Playwright 需要格式化的 Cookie 对象）
+    # 假设你的格式是 session=xxxx; acw_tc=xxxx
+    cookie_items = {}
+    for item in raw_cookie.strip().split(';'):
+        if '=' in item:
+            k, v = item.strip().split('=', 1)
+            cookie_items[k] = v
 
-    # 3. 设置请求头
-    # 通常 API 请求除了 Cookie，建议带上 User-Agent 以模拟真实浏览器
-    headers = {
-        "Cookie": cookie_str,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Referer": "https://anyrouter.top/"
-    }
+    async with async_playwright() as p:
+        # 启动浏览器（无头模式）
+        browser = await p.chromium.launch(headless=True)
+        # 模拟真实浏览器上下文
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+        )
 
-    print("🚀 正在发起签到请求...")
+        # 2. 注入 Cookie
+        # 阿里云主要校验 session 和 acw_tc，注入后浏览器会自动处理后续的 acw_sc__v2
+        cookies = [
+            {
+                "name": key,
+                "value": value,
+                "domain": "anyrouter.top",
+                "path": "/"
+            } for key, value in cookie_items.items()
+        ]
+        await context.add_cookies(cookies)
 
-    try:
-        # 4. 发送 POST 请求 (大多数签到接口为 POST，如果是 GET 请修改为 requests.get)
-        response = requests.post(url, headers=headers, timeout=10)
+        page = await context.new_page()
+
+        print("🚀 正在打开页面并处理 WAF 验证...")
         
-        # 5. 结果处理
-        if response.status_code == 200:
-            print("✅ 请求成功！")
-            print(f"响应内容: {response.text}")
-        else:
-            print(f"⚠️ 请求可能失败，状态码: {response.status_code}")
-            print(f"响应信息: {response.text}")
+        try:
+            # 3. 访问首页，让浏览器自动执行 WAF 的 JS 代码
+            # wait_until="networkidle" 会等待 JS 执行完毕，计算出 acw_sc__v2
+            await page.goto("https://anyrouter.top/user/index", wait_until="networkidle")
             
-    except requests.exceptions.RequestException as e:
-        print(f"❌ 发生网络异常: {e}")
+            print("🔗 正在发起签到 API 请求...")
+
+            # 4. 在当前已通过验证的页面环境下，执行签到请求
+            # 使用 page.evaluate 可以在浏览器上下文直接发请求，自带所有通过验证的 Cookie
+            script = """
+            fetch("/api/user/sign_in", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({})
+            }).then(res => res.text())
+            """
+            result = await page.evaluate(script)
+
+            print("✅ 签到响应结果:")
+            print(result)
+
+        except Exception as e:
+            print(f"❌ 运行中出错: {e}")
+        finally:
+            await browser.close()
 
 if __name__ == "__main__":
-    auto_sign_in()
+    asyncio.run(auto_sign_in())
