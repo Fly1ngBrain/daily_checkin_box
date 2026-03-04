@@ -1,4 +1,4 @@
-name: AnyRouter 每日签到
+name: 每日签到
 
 on:
   schedule:
@@ -8,28 +8,26 @@ on:
 jobs:
   checkin:
     runs-on: ubuntu-latest
-    
+
     steps:
-      # 1. 检出代码
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. 设置 Python 环境
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      # 3. 安装依赖
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
           playwright install chromium --with-deps
 
-      # 4. 运行脚本
-      - name: Run Checkin Script
+      - name: Run Checkin
         env:
+          ANYROUTER_ACCOUNT: ${{ secrets.ANYROUTER_ACCOUNT }}
           ANYROUTER_COOKIE: ${{ secrets.ANYROUTER_COOKIE }}
-        run: |
-          # 确保你的 Python 脚本文件名正确，如果是 anyrouter_checkin_env.py 就用下面这个：
-          python anyrouter_checkin.py
+          FACAI_ACCOUNT: ${{ secrets.FACAI_ACCOUNT }}
+          FACAI_COOKIE: ${{ secrets.FACAI_COOKIE }}
+          FACAI_USERID: ${{ secrets.FACAI_USERID }}
+        run: python main.py
